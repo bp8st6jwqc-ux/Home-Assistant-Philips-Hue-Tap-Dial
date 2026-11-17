@@ -4,8 +4,9 @@ blueprint:
     Vier Tasten schalten konfigurierte Leuchten/Schalter oder Szenen.
     Erneutes Drücken schaltet die zugeordneten Leuchten/Schalter aus.
     Das Drehrad dimmt alle aktuell eingeschalteten Leuchten aus den vier
-    Tasten-Zuordnungen. Bei Szenen deshalb zusätzlich die zugehörigen
-    Leuchten unter "Geräte / Leuchten" auswählen.
+    Tasten-Zuordnungen. Für Szenen müssen zusätzlich alle zugehörigen
+    Leuchten unter "Geräte / Leuchten" ausgewählt werden. Beim zweiten
+    Tastendruck werden diese Leuchten ausgeschaltet.
   domain: automation
   homeassistant:
     min_version: 2024.10.0
@@ -115,7 +116,7 @@ variables:
   active_lights: >
     {% set all_entities = (b1 + b2 + b3 + b4) | unique | list %}
     {{ expand(all_entities)
-       | selectattr('entity_id', 'match', '^light\\.')
+       | selectattr('entity_id', 'match', '^light[.]')
        | selectattr('state', 'equalto', 'on')
        | map(attribute='entity_id') | list }}
 
@@ -140,13 +141,6 @@ actions:
                   - action: scene.turn_on
                     target:
                       entity_id: "{{ s1 }}"
-                  - if:
-                      - condition: template
-                        value_template: "{{ b1 | count > 0 }}"
-                    then:
-                      - action: homeassistant.turn_on
-                        target:
-                          entity_id: "{{ b1 }}"
               - conditions:
                   - condition: template
                     value_template: "{{ b1 | count > 0 }}"
@@ -173,13 +167,6 @@ actions:
                   - action: scene.turn_on
                     target:
                       entity_id: "{{ s2 }}"
-                  - if:
-                      - condition: template
-                        value_template: "{{ b2 | count > 0 }}"
-                    then:
-                      - action: homeassistant.turn_on
-                        target:
-                          entity_id: "{{ b2 }}"
               - conditions:
                   - condition: template
                     value_template: "{{ b2 | count > 0 }}"
@@ -206,13 +193,6 @@ actions:
                   - action: scene.turn_on
                     target:
                       entity_id: "{{ s3 }}"
-                  - if:
-                      - condition: template
-                        value_template: "{{ b3 | count > 0 }}"
-                    then:
-                      - action: homeassistant.turn_on
-                        target:
-                          entity_id: "{{ b3 }}"
               - conditions:
                   - condition: template
                     value_template: "{{ b3 | count > 0 }}"
@@ -239,13 +219,6 @@ actions:
                   - action: scene.turn_on
                     target:
                       entity_id: "{{ s4 }}"
-                  - if:
-                      - condition: template
-                        value_template: "{{ b4 | count > 0 }}"
-                    then:
-                      - action: homeassistant.turn_on
-                        target:
-                          entity_id: "{{ b4 }}"
               - conditions:
                   - condition: template
                     value_template: "{{ b4 | count > 0 }}"
