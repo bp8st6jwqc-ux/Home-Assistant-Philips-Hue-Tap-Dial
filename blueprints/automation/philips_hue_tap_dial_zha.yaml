@@ -233,7 +233,7 @@ actions:
                     target:
                       entity_id: "{{ active_lights }}"
                     data:
-                      brightness_step: "{{ step_size | int }}"
+                      brightness_step: "{{ (step_size | float * 1.5) | round(0) | int }}"
 
               - conditions:
                   - condition: template
@@ -243,5 +243,5 @@ actions:
                     target:
                       entity_id: "{{ active_lights }}"
                     data:
-                      brightness_step: "{{ 0 - (step_size | int) }}"
+                      brightness_step: "{{ 0 - ((step_size | float * 1.5) | round(0) | int) }}"
 
