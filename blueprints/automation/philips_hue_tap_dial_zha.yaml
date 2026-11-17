@@ -81,17 +81,17 @@ blueprint:
     dim_step:
       name: Dimm-Schritt
       description: Helligkeitsänderung pro erkanntem Drehschritt.
-      default: 10
+      default: 4
       selector:
         number:
           min: 1
-          max: 50
+          max: 20
           step: 1
           unit_of_measurement: "%"
           mode: slider
 
-mode: queued
-max: 20
+mode: restart
+max_exceeded: silent
 
 triggers:
   - trigger: event
@@ -240,8 +240,8 @@ actions:
                     target:
                       entity_id: "{{ active_lights }}"
                     data:
-                      brightness_step_pct: "{{ dim_step | int }}"
-                      transition: 0.2
+                      brightness_step_pct: "{{ ((step_size | float / 14) * (dim_step | float)) | round(1) }}"
+                      transition: 0.3
               - conditions:
                   - condition: template
                     value_template: "{{ step_mode | int(-1) == 1 }}"
@@ -250,5 +250,5 @@ actions:
                     target:
                       entity_id: "{{ active_lights }}"
                     data:
-                      brightness_step_pct: "{{ 0 - (dim_step | int) }}"
-                      transition: 0.2
+                      brightness_step_pct: "{{ 0 - (((step_size | float / 14) * (dim_step | float)) | round(1)) }}"
+                      transition: 0.3
