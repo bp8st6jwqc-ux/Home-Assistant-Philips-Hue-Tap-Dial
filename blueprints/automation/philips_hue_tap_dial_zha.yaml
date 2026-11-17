@@ -1,86 +1,85 @@
 blueprint:
-  name: Philips Hue Tap Dial – ZHA (4 Tasten + Dimmer)
+  name: Philips Hue Tap Dial – ZHA
   description: >
-    Steuert vier frei belegbare Tasten mit Licht-/Schalter-Entitäten und optionalen
-    Szenen. Ein erneuter Tastendruck schaltet die zugeordneten Entitäten aus.
-    Das Drehrad dimmt alle aktuell eingeschalteten, in den vier Tasten-Zielen
-    konfigurierten Leuchten. Für Szenen muss zusätzlich das zugehörige Lichtziel
-    angegeben werden, damit die Blueprint beim erneuten Drücken ausschalten kann.
+    Vier Tasten schalten konfigurierte Leuchten/Schalter oder Szenen.
+    Erneutes Drücken schaltet die zugeordneten Leuchten/Schalter aus.
+    Das Drehrad dimmt alle aktuell eingeschalteten Leuchten aus den vier
+    Tasten-Zuordnungen. Bei Szenen deshalb zusätzlich die zugehörigen
+    Leuchten unter "Geräte / Leuchten" auswählen.
   domain: automation
+  homeassistant:
+    min_version: 2024.10.0
   input:
     remote:
       name: Philips Hue Tap Dial
-      description: Das über ZHA eingebundene Tap Dial auswählen.
       selector:
         device:
           integration: zha
+          manufacturer: Signify Netherlands B.V.
+          model: RDM002
     button_1_entities:
-      name: Taste 1 – Geräte / Leuchten
+      name: Taste 1 – Geräte / Leuchten (für Szenen-Aus ebenfalls auswählen)
       default: []
       selector:
         entity:
           multiple: true
-          domain:
-            - light
-            - switch
+          filter:
+            - domain: light
+            - domain: switch
     button_1_scene:
       name: Taste 1 – Szene (optional)
       default: ""
       selector:
         entity:
           domain: scene
-          multiple: false
     button_2_entities:
-      name: Taste 2 – Geräte / Leuchten
+      name: Taste 2 – Geräte / Leuchten (für Szenen-Aus ebenfalls auswählen)
       default: []
       selector:
         entity:
           multiple: true
-          domain:
-            - light
-            - switch
+          filter:
+            - domain: light
+            - domain: switch
     button_2_scene:
       name: Taste 2 – Szene (optional)
       default: ""
       selector:
         entity:
           domain: scene
-          multiple: false
     button_3_entities:
-      name: Taste 3 – Geräte / Leuchten
+      name: Taste 3 – Geräte / Leuchten (für Szenen-Aus ebenfalls auswählen)
       default: []
       selector:
         entity:
           multiple: true
-          domain:
-            - light
-            - switch
+          filter:
+            - domain: light
+            - domain: switch
     button_3_scene:
       name: Taste 3 – Szene (optional)
       default: ""
       selector:
         entity:
           domain: scene
-          multiple: false
     button_4_entities:
-      name: Taste 4 – Geräte / Leuchten
+      name: Taste 4 – Geräte / Leuchten (für Szenen-Aus ebenfalls auswählen)
       default: []
       selector:
         entity:
           multiple: true
-          domain:
-            - light
-            - switch
+          filter:
+            - domain: light
+            - domain: switch
     button_4_scene:
       name: Taste 4 – Szene (optional)
       default: ""
       selector:
         entity:
           domain: scene
-          multiple: false
     dim_step:
       name: Dimm-Schritt
-      description: Helligkeitsänderung pro Drehschritt in Prozent.
+      description: Helligkeitsänderung pro erkanntem Drehschritt.
       default: 10
       selector:
         number:
@@ -91,42 +90,40 @@ blueprint:
           mode: slider
 
 mode: queued
-max: 10
+max: 20
 
 triggers:
   - trigger: event
     event_type: zha_event
+    event_data:
+      device_id: !input remote
 
-conditions:
-  - condition: template
-    value_template: >
-      {{ trigger.event.data.device_id == device_id }}
+variables:
+  b1: !input button_1_entities
+  s1: !input button_1_scene
+  b2: !input button_2_entities
+  s2: !input button_2_scene
+  b3: !input button_3_entities
+  s3: !input button_3_scene
+  b4: !input button_4_entities
+  s4: !input button_4_scene
+  dim_step: !input dim_step
+  command: "{{ trigger.event.data.command | default('') }}"
+  params: "{{ trigger.event.data.params | default({}) }}"
+  step_mode: "{{ params.step_mode | default('') }}"
+  step_size: "{{ params.step_size | default(0) | int(0) }}"
+  active_lights: >
+    {% set all_entities = (b1 + b2 + b3 + b4) | unique | list %}
+    {{ expand(all_entities)
+       | selectattr('entity_id', 'match', '^light\\.')
+       | selectattr('state', 'equalto', 'on')
+       | map(attribute='entity_id') | list }}
 
 actions:
-  - variables:
-      device_id: !input remote
-      b1: !input button_1_entities
-      s1: !input button_1_scene
-      b2: !input button_2_entities
-      s2: !input button_2_scene
-      b3: !input button_3_entities
-      s3: !input button_3_scene
-      b4: !input button_4_entities
-      s4: !input button_4_scene
-      step: !input dim_step
-      command: "{{ trigger.event.data.command | default('') }}"
-      cluster: "{{ trigger.event.data.cluster_id | default(0) | int }}"
-      args: "{{ trigger.event.data.args | default([]) }}"
-      active_lights: >
-        {% set entities = (b1 + b2 + b3 + b4) | unique | list %}
-        {{ expand(entities)
-           | selectattr('domain', 'equalto', 'light')
-           | selectattr('state', 'equalto', 'on')
-           | map(attribute='entity_id') | list }}
   - choose:
       - conditions:
           - condition: template
-            value_template: "{{ command in ['button_1_press', 'button_1_short_release'] }}"
+            value_template: "{{ command == 'button_1_press' }}"
         sequence:
           - choose:
               - conditions:
@@ -143,6 +140,13 @@ actions:
                   - action: scene.turn_on
                     target:
                       entity_id: "{{ s1 }}"
+                  - if:
+                      - condition: template
+                        value_template: "{{ b1 | count > 0 }}"
+                    then:
+                      - action: homeassistant.turn_on
+                        target:
+                          entity_id: "{{ b1 }}"
               - conditions:
                   - condition: template
                     value_template: "{{ b1 | count > 0 }}"
@@ -152,7 +156,7 @@ actions:
                       entity_id: "{{ b1 }}"
       - conditions:
           - condition: template
-            value_template: "{{ command in ['button_2_press', 'button_2_short_release'] }}"
+            value_template: "{{ command == 'button_2_press' }}"
         sequence:
           - choose:
               - conditions:
@@ -169,6 +173,13 @@ actions:
                   - action: scene.turn_on
                     target:
                       entity_id: "{{ s2 }}"
+                  - if:
+                      - condition: template
+                        value_template: "{{ b2 | count > 0 }}"
+                    then:
+                      - action: homeassistant.turn_on
+                        target:
+                          entity_id: "{{ b2 }}"
               - conditions:
                   - condition: template
                     value_template: "{{ b2 | count > 0 }}"
@@ -178,7 +189,7 @@ actions:
                       entity_id: "{{ b2 }}"
       - conditions:
           - condition: template
-            value_template: "{{ command in ['button_3_press', 'button_3_short_release'] }}"
+            value_template: "{{ command == 'button_3_press' }}"
         sequence:
           - choose:
               - conditions:
@@ -195,6 +206,13 @@ actions:
                   - action: scene.turn_on
                     target:
                       entity_id: "{{ s3 }}"
+                  - if:
+                      - condition: template
+                        value_template: "{{ b3 | count > 0 }}"
+                    then:
+                      - action: homeassistant.turn_on
+                        target:
+                          entity_id: "{{ b3 }}"
               - conditions:
                   - condition: template
                     value_template: "{{ b3 | count > 0 }}"
@@ -204,7 +222,7 @@ actions:
                       entity_id: "{{ b3 }}"
       - conditions:
           - condition: template
-            value_template: "{{ command in ['button_4_press', 'button_4_short_release'] }}"
+            value_template: "{{ command == 'button_4_press' }}"
         sequence:
           - choose:
               - conditions:
@@ -221,6 +239,13 @@ actions:
                   - action: scene.turn_on
                     target:
                       entity_id: "{{ s4 }}"
+                  - if:
+                      - condition: template
+                        value_template: "{{ b4 | count > 0 }}"
+                    then:
+                      - action: homeassistant.turn_on
+                        target:
+                          entity_id: "{{ b4 }}"
               - conditions:
                   - condition: template
                     value_template: "{{ b4 | count > 0 }}"
@@ -230,26 +255,29 @@ actions:
                       entity_id: "{{ b4 }}"
       - conditions:
           - condition: template
-            value_template: "{{ command == 'step' and cluster == 8 and (args | count > 1) and (active_lights | count > 0) }}"
+            value_template: >
+              {{ command == 'step_with_on_off'
+                 and step_size > 0 and step_size != 255
+                 and active_lights | count > 0 }}
         sequence:
           - choose:
               - conditions:
                   - condition: template
-                    value_template: "{{ (args[0] | int) == 0 }}"
+                    value_template: "{{ step_mode == 'StepMode.Up' }}"
                 sequence:
                   - action: light.turn_on
                     target:
                       entity_id: "{{ active_lights }}"
                     data:
-                      brightness_step_pct: "{{ step }}"
+                      brightness_step_pct: "{{ dim_step | int }}"
                       transition: 0.2
               - conditions:
                   - condition: template
-                    value_template: "{{ (args[0] | int) == 1 }}"
+                    value_template: "{{ step_mode == 'StepMode.Down' }}"
                 sequence:
                   - action: light.turn_on
                     target:
                       entity_id: "{{ active_lights }}"
                     data:
-                      brightness_step_pct: "{{ 0 - (step | int) }}"
+                      brightness_step_pct: "{{ 0 - (dim_step | int) }}"
                       transition: 0.2
