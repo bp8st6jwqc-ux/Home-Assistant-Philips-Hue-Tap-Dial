@@ -263,7 +263,7 @@ actions:
           - choose:
               - conditions:
                   - condition: template
-                    value_template: "{{ step_mode == 'StepMode.Up' }}"
+                    value_template: "{{ step_mode | int(-1) == 0 }}"
                 sequence:
                   - action: light.turn_on
                     target:
@@ -273,7 +273,7 @@ actions:
                       transition: 0.2
               - conditions:
                   - condition: template
-                    value_template: "{{ step_mode == 'StepMode.Down' }}"
+                    value_template: "{{ step_mode | int(-1) == 1 }}"
                 sequence:
                   - action: light.turn_on
                     target:
