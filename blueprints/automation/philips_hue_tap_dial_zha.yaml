@@ -78,19 +78,9 @@ blueprint:
       selector:
         entity:
           domain: scene
-    dim_step:
-      name: Dimm-Schritt
-      description: Helligkeitsänderung pro erkanntem Drehschritt.
-      default: 4
-      selector:
-        number:
-          min: 1
-          max: 20
-          step: 1
-          unit_of_measurement: "%"
-          mode: slider
 
-mode: restart
+mode: parallel
+max: 50
 max_exceeded: silent
 
 triggers:
@@ -112,7 +102,6 @@ variables:
   scene2_entities: "{{ state_attr(s2, 'entity_id') or [] }}"
   scene3_entities: "{{ state_attr(s3, 'entity_id') or [] }}"
   scene4_entities: "{{ state_attr(s4, 'entity_id') or [] }}"
-  dim_step: !input dim_step
   command: "{{ trigger.event.data.command | default('') }}"
   step_mode: "{{ trigger.event.data.args[0] | default(-1) | int(-1) }}"
   step_size: "{{ trigger.event.data.args[1] | default(0) | int(0) }}"
@@ -240,8 +229,8 @@ actions:
                     target:
                       entity_id: "{{ active_lights }}"
                     data:
-                      brightness_step_pct: "{{ ((step_size | float / 14) * (dim_step | float)) | round(1) }}"
-                      transition: 0.3
+                      brightness_step: "{{ step_size | int }}"
+
               - conditions:
                   - condition: template
                     value_template: "{{ step_mode | int(-1) == 1 }}"
@@ -250,5 +239,5 @@ actions:
                     target:
                       entity_id: "{{ active_lights }}"
                     data:
-                      brightness_step_pct: "{{ 0 - (((step_size | float / 14) * (dim_step | float)) | round(1)) }}"
-                      transition: 0.3
+                      brightness_step: "{{ 0 - (step_size | int) }}"
+
