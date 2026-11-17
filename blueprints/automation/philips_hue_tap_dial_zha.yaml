@@ -108,13 +108,17 @@ variables:
   s3: !input button_3_scene
   b4: !input button_4_entities
   s4: !input button_4_scene
+  scene1_entities: "{{ state_attr(s1, 'entity_id') or [] }}"
+  scene2_entities: "{{ state_attr(s2, 'entity_id') or [] }}"
+  scene3_entities: "{{ state_attr(s3, 'entity_id') or [] }}"
+  scene4_entities: "{{ state_attr(s4, 'entity_id') or [] }}"
   dim_step: !input dim_step
   command: "{{ trigger.event.data.command | default('') }}"
   params: "{{ trigger.event.data.params | default({}) }}"
   step_mode: "{{ params.step_mode | default('') }}"
   step_size: "{{ params.step_size | default(0) | int(0) }}"
   active_lights: >
-    {% set all_entities = (b1 + b2 + b3 + b4) | unique | list %}
+    {% set all_entities = (b1 + b2 + b3 + b4 + scene1_entities + scene2_entities + scene3_entities + scene4_entities) | unique | list %}
     {{ expand(all_entities)
        | selectattr('entity_id', 'match', '^light[.]')
        | selectattr('state', 'equalto', 'on')
@@ -129,11 +133,11 @@ actions:
           - choose:
               - conditions:
                   - condition: template
-                    value_template: "{{ b1 | count > 0 and (expand(b1) | selectattr('state','equalto','on') | list | count > 0) }}"
+                    value_template: "{{ ((b1 + scene1_entities) | unique | list | count > 0) and (expand(b1 + scene1_entities) | selectattr('state','equalto','on') | list | count > 0) }}"
                 sequence:
                   - action: homeassistant.turn_off
                     target:
-                      entity_id: "{{ b1 }}"
+                      entity_id: "{{ b1 + scene1_entities }}"
               - conditions:
                   - condition: template
                     value_template: "{{ s1 not in ['', none] }}"
@@ -155,11 +159,11 @@ actions:
           - choose:
               - conditions:
                   - condition: template
-                    value_template: "{{ b2 | count > 0 and (expand(b2) | selectattr('state','equalto','on') | list | count > 0) }}"
+                    value_template: "{{ ((b2 + scene2_entities) | unique | list | count > 0) and (expand(b2 + scene2_entities) | selectattr('state','equalto','on') | list | count > 0) }}"
                 sequence:
                   - action: homeassistant.turn_off
                     target:
-                      entity_id: "{{ b2 }}"
+                      entity_id: "{{ b2 + scene2_entities }}"
               - conditions:
                   - condition: template
                     value_template: "{{ s2 not in ['', none] }}"
@@ -181,11 +185,11 @@ actions:
           - choose:
               - conditions:
                   - condition: template
-                    value_template: "{{ b3 | count > 0 and (expand(b3) | selectattr('state','equalto','on') | list | count > 0) }}"
+                    value_template: "{{ ((b3 + scene3_entities) | unique | list | count > 0) and (expand(b3 + scene3_entities) | selectattr('state','equalto','on') | list | count > 0) }}"
                 sequence:
                   - action: homeassistant.turn_off
                     target:
-                      entity_id: "{{ b3 }}"
+                      entity_id: "{{ b3 + scene3_entities }}"
               - conditions:
                   - condition: template
                     value_template: "{{ s3 not in ['', none] }}"
@@ -207,11 +211,11 @@ actions:
           - choose:
               - conditions:
                   - condition: template
-                    value_template: "{{ b4 | count > 0 and (expand(b4) | selectattr('state','equalto','on') | list | count > 0) }}"
+                    value_template: "{{ ((b4 + scene4_entities) | unique | list | count > 0) and (expand(b4 + scene4_entities) | selectattr('state','equalto','on') | list | count > 0) }}"
                 sequence:
                   - action: homeassistant.turn_off
                     target:
-                      entity_id: "{{ b4 }}"
+                      entity_id: "{{ b4 + scene4_entities }}"
               - conditions:
                   - condition: template
                     value_template: "{{ s4 not in ['', none] }}"
